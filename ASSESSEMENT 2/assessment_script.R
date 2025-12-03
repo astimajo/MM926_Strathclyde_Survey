@@ -102,19 +102,94 @@ plot(results, type="density")
 
 ## Provide an appropriate visualisation of the missing data.
 
-likert.histogram.plot(results) # missing data
+# Missing Answers on LIKERT Questions.
+likert.histogram.plot(results)
+
+# Return the LIKERTs from Categorical to Numerical Variables.
+data$Performance <- as.numeric(data$Performance)
+data$Social <- as.numeric(data$Social)
+data$Mental_Health <- as.numeric(data$Mental_Health)
+data$Awareness <- as.numeric(data$Awareness)
+data$Connected <- as.numeric(data$Connected)
+data$Resources <- as.numeric(data$Resources)
+data$Expression <- as.numeric(data$Expression)
+data$Community <- as.numeric(data$Community)
+data$Networking <- as.numeric(data$Networking)
+data$Interactions <- as.numeric(data$Interactions)
+data$Time_Wasted <- as.numeric(data$Time_Wasted)
+data$Concentration <- as.numeric(data$Concentration)
+data$Negative_Content <- as.numeric(data$Negative_Content)
+data$Data_Security <- as.numeric(data$Data_Security)
+data$Inadequate <- as.numeric(data$Inadequate)
+
+require(tidyverse)
+require(mice)
+require(naniar)
+library(simputation)
+library(dplyr)
+
+data1 <- data[,2:20] # remove ID
+vis_miss(data1) # This seems to be the more appropriate visualization.
 
 ## Test whether or not the data is missing completely at random.
+mcar_test(data1)
+
+# Interpretation: Data is consistent with MCAR as we fail to reject the Null hypothesis which
+# is MCAR. This means that the missingness in the data does not seem to depend 
+# on any observed variables in the dataset.
 
 ## Impute missing data using regression imputation and predictive mean matching.
+
+# Create shadow matrix first.
+as_shadow(data1)
+shadow_data <- bind_shadow(data1)
+
+# Regression Imputation
+
+data2 <- complete(mice(shadow_data, method="norm.predict", m=1, maxit=1))
+
+# Predictive Mean Matching
+
+data3 <- complete(mice(shadow_data, method="pmm", m=1, maxit = 1))
 
 ## Use appropriate plots to assess the two imputations for the variable with the
 ## most missing data. Comment on the results.
 
+# Regression Imputation
+
+ggplot(data2,
+       aes(x = Awareness,
+           colour = Awareness_NA)) + 
+  geom_density()
+
+data2 %>%
+  ggplot(aes(x = Awareness,
+             colour=Awareness_NA)) + 
+  stat_ecdf()
+
+# Predictive Mean Matching
+
+ggplot(data3,
+       aes(x = Awareness,
+           colour = Awareness_NA)) + 
+  geom_density()
+
+data3 %>%
+  ggplot(aes(x = Awareness,
+             colour=Awareness_NA)) + 
+  stat_ecdf()
+
 ## Use Kolmogorov-Smirnov tests to assess the imputations for the variable with
 ## the most missing data. Comment on the results.
 
+ks.test(shadow_data$Awareness, data2$Awareness) # Good p-value
+ks.test(shadow_data$Awareness, data3$Awareness) # Best p-value (1). Same distribution. Best.
+
 ## Select an imputation method, with justification, and save the dataset that is
 ## created when this imputation method is used.
+
+# WE NEED TO EDIT EVERYTHING IN THE VISUALIZATIONS AND TESTS FIRST.
+# COMMENT ON RESULTS AND VISUALIZATIONS FIRST.
+# PMM IS THE BEST RESULT. CREATE A JUSTIFICATION FOR THIS.
 
 
