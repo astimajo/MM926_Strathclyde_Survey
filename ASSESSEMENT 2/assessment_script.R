@@ -167,6 +167,10 @@ data2 %>%
              colour=Awareness_NA)) + 
   stat_ecdf()
 
+# The imputed values follow the same distribution generally as the observed values.
+# The imputed curve is noticeably smoother.
+# The ECDF shows a good amount of overlap.
+
 # Predictive Mean Matching
 
 ggplot(data3,
@@ -179,6 +183,10 @@ data3 %>%
              colour=Awareness_NA)) + 
   stat_ecdf()
 
+# The imputed values follows the exact shape of the observed data.
+# The Density plots overlap almost perfectly.
+# ECDF plot also shows an almost perfect overlap.
+
 ## Use Kolmogorov-Smirnov tests to assess the imputations for the variable with
 ## the most missing data. Comment on the results.
 
@@ -188,8 +196,82 @@ ks.test(shadow_data$Awareness, data3$Awareness) # Best p-value (1). Same distrib
 ## Select an imputation method, with justification, and save the dataset that is
 ## created when this imputation method is used.
 
-# WE NEED TO EDIT EVERYTHING IN THE VISUALIZATIONS AND TESTS FIRST.
-# COMMENT ON RESULTS AND VISUALIZATIONS FIRST.
-# PMM IS THE BEST RESULT. CREATE A JUSTIFICATION FOR THIS.
+# Predictive Mean Matching is the best approach for imputation for this exact problem.
+# First reason for this is the Density and ECDF plots which show an almost perfect overlap
+# with the observed data with almost identical variance behavior. When we compare this with
+# the Regression imputation method it shows that the variance is minimized not to mention
+# there is a chance for float values with the regression which affects the behavior of 
+# the imputed values. Second reason for this is the extremely high p-value that was
+# observed in the K-S Test. The Regression imputation gives us a significant result
+# but the PMM imputation gave us a p-value of 1 which is extremely higher which means
+# that PMM imputation gave us values that really closely follows the distribution of our
+# observed data. Generally, it is also most recommended to use PMM for LIKERT scale
+# variables because it is known that this method produces values that closely 
+# reflect the original data distribution
+
+# Add back ID column
+data3$ID <- data$ID
+
+# Place ID as first column for new data
+data3 <- data3 %>% select(ID, everything())
+
+# Remove shadow variables
+data3 <- data3[,1:20]
+
+# Sanity check
+vis_miss(data3) # Clean.
+
+# Save the dataset
+write.csv(data3, "data3_imputed_PMM.csv", row.names = FALSE)
+
+## d
+## Using the imputed dataset saved in the previous question, perform unweighted 
+## logistic generalised linear regression to investigate whether sex or year is associated with
+## a positive overall attitude towards social media, as indicated by an average value of
+## 3.5 or more for the total score from the LIKERT questions. Provide an interpretation
+## of your results.
+
+# Load in Data.
+data_new <- read.csv("data3_imputed_PMM.csv")
+
+# Recode Negative questions
+data_new$Performance <- 6 - data_new$Performance
+data_new$Mental_Health <- 6 - data_new$Mental_Health
+data_new$Interactions <- 6 - data_new$Interactions
+data_new$Time_Wasted <- 6 - data_new$Time_Wasted
+data_new$Concentration <- 6 - data_new$Concentration
+data_new$Negative_Content <- 6 - data_new$Negative_Content
+data_new$Inadequate <- 6 - data_new$Inadequate
+data_new$Data_Security <- 6 - data_new$Data_Security
+
+# Create the Binary target variable.
+
+data_new$summary <- rowSums(data_new[, 6:20])
+data_new$positive_attitude <- ifelse(data_new$summary >= 52.5, "positive", "not_positive")
+data_new$positive_attitude <- as.factor(data_new$positive_attitude)
+data_new$positive_attitude <- relevel(data_new$positive_attitude, ref = "not_positive") # 1 as positive.
+
+# Recode demographic variables as factors.
+
+data_new$Sex <- factor(data_new$Sex)
+data_new$Faculty <- factor(data_new$Faculty)
+
+# Logistic Regression Analysis.
+
+model <- glm(positive_attitude ~ Sex + Year, data = data_new, family="binomial"(link="logit"))
+summary(model)
+
+# Both Year and Sex is not significantly associated with positive attitudes toward social media
+# This is evidenced by the extremely high p-values for Sex and Year in the Logistic Regression
+# Results. 
+
+## e
+## Now suppose that participants were stratified based on the faculty that they belong
+## to, and that there were a total of 2000 students in Faculty 1, 700 students in Faculty
+## 2 and 300 students in Faculty 3. Use the imputed data from part (c) to construct a
+## weighted logistic generalised linear model to investigate whether sex or year is associated 
+## with a positive overall attitude towards social media, as defined in (d). How do the results from 
+## the weighted regression compare to those from the unweighted
+## regression?
 
 
