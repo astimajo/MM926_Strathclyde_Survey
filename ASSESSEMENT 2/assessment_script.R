@@ -1,5 +1,7 @@
 ### TASK 1
 
+set.seed(1234) # Just to ensure replicability
+
 ## a 
 ## Assess the internal consistency of the LIKERT questions. Would the removal of any
 ## questions improve the overall internal consistency?
@@ -209,20 +211,24 @@ ks.test(shadow_data$Awareness, data3$Awareness) # Best p-value (1). Same distrib
 # variables because it is known that this method produces values that closely 
 # reflect the original data distribution
 
+library(data.table)
+
+data_imp_final <- copy(data3)
+
 # Add back ID column
-data3$ID <- data$ID
+data_imp_final$ID <- data$ID
 
 # Place ID as first column for new data
-data3 <- data3 %>% select(ID, everything())
+data_imp_final <- data_imp_final %>% select(ID, everything())
 
 # Remove shadow variables
-data3 <- data3[,1:20]
+data_imp_final <- data_imp_final[,1:20]
 
 # Sanity check
-vis_miss(data3) # Clean.
+vis_miss(data_imp_final) # Clean.
 
 # Save the dataset
-write.csv(data3, "data3_imputed_PMM.csv", row.names = FALSE)
+write.csv(data_imp_final, "data3_imputed_PMM.csv", row.names = FALSE)
 
 ## d
 ## Using the imputed dataset saved in the previous question, perform unweighted 
@@ -274,4 +280,90 @@ summary(model)
 ## the weighted regression compare to those from the unweighted
 ## regression?
 
+table(data_new$Faculty) # Sample breakdowwn
 
+# Create weights variable
+
+# population sizes variable
+population_sizes <- c("1" = 2000, "2" = 700, "3" = 300)
+
+# weights = N / n just like in the API dataset.
+
+sample_sizes <- table(data_new$Faculty)
+weight_lookup <- population_sizes / sample_sizes
+data_new$weight <- weight_lookup[as.character(data_new$Faculty)]
+
+
+model_weighted <- glm(positive_attitude ~ Sex + Year, data = data_new,
+                      family="binomial"(link="logit"), weights = weight)
+
+summary(model_weighted)
+
+# Both Year and Sex is still not significantly associated with positive attitudes toward social media
+# This is evidenced by the still extremely high p-values for Sex and Year in the Logistic Regression
+# Results. There is a noticeable improvement in the p-value for Year but overall both are 
+# still not significant.
+
+## f
+## Create a word cloud associated with positive qualitative responses and a word cloud
+## associated with negative qualitative responses. Provide comments comparing the
+## two.
+
+# Load
+library("tm")
+library("SnowballC")
+library("wordcloud")
+library("RColorBrewer")
+
+# data=read.csv("Attitudes.csv")
+positive=readLines("positive comments.txt")
+text=Corpus(VectorSource(positive))
+
+# Convert the text to lower case
+text=tm_map(text, content_transformer(tolower))
+# Remove english common stopwords
+text = tm_map(text, removeWords, stopwords("english"))
+
+# get a matrix of the most common words and their frequencies
+dtm = TermDocumentMatrix(text)
+m = as.matrix(dtm)
+v = sort(rowSums(m),decreasing=TRUE)
+d = data.frame(word = names(v),freq=v)
+head(d, 10)
+
+# set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+
+negative=readLines("negative comments.txt")
+text2=Corpus(VectorSource(negative))
+
+# Convert the text to lower case
+text2=tm_map(text2, content_transformer(tolower))
+# Remove english common stopwords
+text2 = tm_map(text2, removeWords, stopwords("english"))
+
+dtm = TermDocumentMatrix(text2)
+m = as.matrix(dtm)
+v = sort(rowSums(m),decreasing=TRUE)
+d = data.frame(word = names(v),freq=v)
+head(d, 10)
+
+# set.seed(1234)
+wordcloud(words = d$word, freq = d$freq, min.freq = 1,
+          max.words=200, random.order=FALSE, rot.per=0.35, 
+          colors=brewer.pal(8, "Dark2"))
+
+# The positive word cloud highlights themes of enjoyment, creativity, and connection, 
+# with prominent words such as “enjoy,” “love,” “platform,” “space,” “inspiration,” and 
+# “connection,” suggesting that students who responded positively view social media as a 
+# supportive, creative, and socially enriching environment. In contrast, the negative word 
+# cloud contains terms like “hard,” “overwhelming,” “fake,” “pressure,” “comparison,” and “distracts,” 
+# reflecting concerns about emotional strain, misinformation, unrealistic standards, and cognitive overload.
+# Overall, the contrast between the two word clouds shows that positive attitudes centre on community and
+# empowerment, whereas negative attitudes emphasise stress, distraction, and the psychological burdens 
+# associated with social media use.
+
+### EDIT THE COMMENTS AND RESULTS IN THE SUMMARY PAPER.

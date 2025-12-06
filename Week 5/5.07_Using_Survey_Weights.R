@@ -8,6 +8,17 @@ apistrat_design <- svydesign(data = apistrat,
                              strata = ~stype)
 summary(apistrat_design)
 
+N_by_stratum <- table(apipop$stype)
+n_by_stratum <- table(apistrat$stype)
+
+N_by_stratum
+n_by_stratum
+
+N_by_stratum / n_by_stratum
+
+# Compare to weights:
+N_by_stratum / n_by_stratum
+
 svymean(~growth, apistrat_design)
 mean(apistrat$growth)
 
